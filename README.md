@@ -42,11 +42,9 @@ python3 -m http.server 8000      # then open http://localhost:8000
 
 ## Put it on GitHub Pages
 
-1. Push this folder to the repository.
-2. In the repository, go to **Settings → Pages**, choose **Deploy from a branch**, then pick `main` and the `/ (root)` folder.
-3. The site appears at https://brockwilson132.github.io/Minecraft-Designer/. Each design has its own link, for example `…/Minecraft-Designer/#cartographers-rotunda`.
+The workflow in `.github/workflows/pages.yml` publishes the site on every push to `main`, after checking that every design builds. The site is at https://brockwilson132.github.io/Minecraft-Designer/, and each design has its own link, for example `…/Minecraft-Designer/#cartographers-rotunda`.
 
-The `.nojekyll` file stops GitHub from processing the files.
+If a deploy ever fails with "Pages not enabled", open the repository's **Settings → Pages** and set **Source** to **GitHub Actions** once.
 
 ## Project layout
 
