@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blockwright</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Build companions for Minecraft: browse designs, then build them layer by layer, column by column and step by step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ============ Library ============ -->
+<section id="library" class="library" hidden>
+  <header class="lib-head">
+    <div class="brand">
+      <h1>Blockwright</h1>
+      <p>Pick a design, then build it layer by layer, column by column, one part at a time.</p>
+    </div>
+    <div class="lib-tools">
+      <input id="q" type="search" placeholder="Search designs" aria-label="Search designs" autocomplete="off">
+      <div class="chips" id="tagChips" role="group" aria-label="Filter by tag"></div>
+    </div>
+  </header>
+  <div class="grid" id="cards"></div>
+  <footer class="lib-foot">
+    <p><b>Add a design.</b> Copy <code>designs/_template.js</code>, give it a new id, write its <code>build(w)</code> function and add one <code>&lt;script&gt;</code> line to <code>index.html</code>. It appears here with its own build steps.</p>
+  </footer>
+</section>
+
+<!-- ============ Builder ============ -->
+<section id="builder" class="shell" hidden>
+  <header class="appbar">
+    <a class="back" href="#" aria-label="Back to the library">‹ <span>Library</span></a>
+    <div class="ttl"><b id="bName"></b><span id="bMeta"></span></div>
+    <button class="btn ghost" id="aboutBtn">About</button>
+  </header>
+
+  <div class="work">
+    <aside class="left">
+      <section class="panel" id="pSteps" aria-label="Build steps">
+        <div class="phd"><h2>Build steps</h2><span class="muted mono" id="prog"></span><button class="x" data-close aria-label="Close">×</button></div>
+        <div class="progress"><i id="progBar"></i></div>
+        <div class="seg full" role="group" aria-label="What to show">
+          <button class="btn" data-mode="all">Whole build</button>
+          <button class="btn" data-mode="step">One step</button>
+        </div>
+        <div class="row between" id="earlierRow">
+          <span class="muted small">Earlier steps</span>
+          <div class="seg sm" role="group" aria-label="Earlier steps">
+            <button class="btn" data-earlier="ghost">Faded</button>
+            <button class="btn" data-earlier="hide">Hidden</button>
+          </div>
+        </div>
+        <div class="steplist" id="stepList"></div>
+      </section>
+    </aside>
+
+    <main class="center">
+      <div class="stepbar">
+        <button class="btn sq" id="sPrev" aria-label="Previous step">‹</button>
+        <button class="stepname" id="stepName" aria-label="Choose a step"><span class="grp" id="sGrp"></span><b id="sName"></b></button>
+        <button class="btn sq" id="sNext" aria-label="Next step">›</button>
+        <button class="btn done" id="sDone" aria-pressed="false">Done</button>
+      </div>
+      <div class="viewbar">
+        <div class="seg tabs" role="tablist" aria-label="View">
+          <button class="btn" data-tab="plan">Top</button>
+          <button class="btn" data-tab="side">Side</button>
+          <button class="btn" data-tab="3d">3D</button>
+          <button class="btn" data-tab="pic">Picture</button>
+        </div>
+        <div class="zoom"><button class="btn sq" id="zOut" aria-label="Zoom out">−</button><button class="btn sq" id="zIn" aria-label="Zoom in">+</button></div>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="pane" data-pane="plan">
+          <canvas class="grid" id="plan" aria-label="Top-down view of the cursor layer. Tap to move the cursor, drag to pan."></canvas>
+        </div>
+        <div class="pane" data-pane="side">
+          <div class="sidewrap">
+            <canvas id="mini" aria-label="The whole build from the side. Tap or drag to move up and down."></canvas>
+            <canvas class="grid" id="sec" aria-label="Side slice through the cursor. Tap to move the cursor, drag to pan."></canvas>
+          </div>
+        </div>
+        <div class="pane" data-pane="3d"><div class="view3d" id="view3d"></div></div>
+        <div class="pane" data-pane="pic"><canvas id="iso" class="iso" aria-label="Picture of the build"></canvas></div>
+
+        <div class="stagebar">
+        <div class="chip-layer" id="layerChip">
+          <button class="mini-btn" id="lDn" aria-label="Previous layer with blocks to place">⇣</button>
+          <span id="layerTxt"></span>
+          <button class="mini-btn" id="lUp" aria-label="Next layer with blocks to place">⇡</button>
+        </div>
+        <div class="side-dir seg sm" id="sideDir" role="group" aria-label="Side view direction">
+          <button class="btn" data-axis="x">E–W</button><button class="btn" data-axis="z">N–S</button>
+        </div>
+        <div class="overlay-tools" id="tools3d">
+          <button class="btn" id="upTo" aria-pressed="false">Up to layer</button>
+          <button class="btn" id="cut" aria-pressed="false">Cut at cursor</button>
+          <button class="btn" id="reset">Reset</button>
+        </div>
+        <div class="overlay-tools" id="toolsPic">
+          <button class="btn" id="rotL" aria-label="Rotate left">↺</button>
+          <button class="btn" id="rotR" aria-label="Rotate right">↻</button>
+          <button class="btn" id="dusk" aria-pressed="false">Dusk</button>
+        </div>
+        </div>
+      </div>
+
+      <div class="cursor">
+        <div class="readout" id="readout"></div>
+        <div class="steppers">
+          <div class="stp"><button data-d="x" data-s="-1" aria-label="X minus one">−</button><label><span>X</span><input id="inX" type="number" inputmode="numeric" aria-label="X"></label><button data-d="x" data-s="1" aria-label="X plus one">+</button></div>
+          <div class="stp"><button data-d="z" data-s="-1" aria-label="Z minus one">−</button><label><span>Z</span><input id="inZ" type="number" inputmode="numeric" aria-label="Z"></label><button data-d="z" data-s="1" aria-label="Z plus one">+</button></div>
+          <div class="stp y"><button data-d="y" data-s="-1" aria-label="Layer down">−</button><label><span>Layer</span><input id="inY" type="number" inputmode="numeric" aria-label="Layer"></label><button data-d="y" data-s="1" aria-label="Layer up">+</button></div>
+        </div>
+      </div>
+
+      <nav class="dock" aria-label="Panels">
+        <button data-open="pSteps">Steps</button>
+        <button data-open="pBlocks">Blocks</button>
+        <button data-open="pColumn">Column</button>
+      </nav>
+    </main>
+
+    <aside class="right">
+      <section class="panel" id="pBlocks" aria-label="Blocks to gather">
+        <div class="phd"><h2>Blocks</h2><span class="muted mono" id="blkTotal"></span><button class="x" data-close aria-label="Close">×</button></div>
+        <div class="seg full" role="group" aria-label="Count blocks for">
+          <button class="btn" data-scope="layer">This layer</button>
+          <button class="btn" data-scope="step" id="scopeStep">This step</button>
+        </div>
+        <div class="mats" id="mats"></div>
+      </section>
+      <section class="panel" id="pColumn" aria-label="Column under the cursor">
+        <div class="phd"><h2 id="cTitle">Column</h2><span class="muted small" id="cSub"></span><button class="x" data-close aria-label="Close">×</button></div>
+        <div class="runs" id="runs"></div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel drawer" id="pAbout" aria-label="About this design">
+    <div class="phd"><h2 id="aName">About</h2><button class="x" data-close aria-label="Close">×</button></div>
+    <div class="settings">
+      <label class="switch"><input type="checkbox" id="frameOnly"><span>Frame only</span><em>Hide glass, doors, lanterns, fences, pinnacles and furniture to see the shell.</em></label>
+      <button class="btn" id="resetProg">Clear my progress</button>
+      <span class="muted small" id="resetMsg" role="status"></span>
+    </div>
+    <div class="about" id="aboutBody"></div>
+  </section>
+  <div class="scrim" id="scrim" hidden></div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="js/blocks.js"></script>
+<script src="js/world.js"></script>
+<script src="js/render-iso.js"></script>
+<!-- Designs: add one line per design file -->
+<script src="designs/cartographers-rotunda.js"></script>
+<script src="designs/cartographers-spire.js"></script>
+<!-- App -->
+<script src="js/library.js"></script>
+<script src="js/builder.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
