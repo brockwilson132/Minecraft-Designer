@@ -39,7 +39,7 @@ In the Claude-hosted version of the app, the builder has a **✦ Claude** button
 - **Every change is saved with an undo point.** **Undo** steps back one change. **Revert to original** drops all edits to a built-in design.
 - **Export** saves the design as `designs/<id>.js`, ready for this repository.
 
-Designs made or edited in the app are stored with the Claude-hosted app, not in this repository. To publish one here, export it (or ask Claude in a coding session to bring it over), add the file to `designs/` and its `<script>` line to `index.html`. The GitHub Pages site has no Claude panel, because it can't reach a Claude account. Everything else works the same there.
+Designs made or edited in the app are stored with the Claude-hosted app. **Publish to GitHub** in the Claude panel puts one on this site: it starts a saved Claude task (through the Claude Code Remote connector) that writes `designs/<id>.js`, adds its `<script>` line, runs the checker, commits and pushes. The Pages workflow then deploys it, usually within a few minutes. Publishing again replaces the copy here. You can also export the file and add it by hand. The GitHub Pages site has no Claude panel, because it can't reach a Claude account. Everything else works the same there.
 
 ## Run it
 

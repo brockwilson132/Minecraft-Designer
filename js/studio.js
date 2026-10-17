@@ -178,15 +178,41 @@ async function exportFile(){const c=BK.Builder.context();if(!c)return;const txt=
   if(dl){try{await dl.save({filename:c.design.id+'.js',data:txt});note('Saved '+c.design.id+'.js. Put it in the designs folder and add its script line to index.html.','ok');return;}catch(e){}}
   try{await navigator.clipboard.writeText(txt);note('Copied the design file to your clipboard.','ok');}catch(e){note('Could not save or copy the file here.','warn');}}
 
+/* ---------- publish to the GitHub site ----------
+   The page asks a saved Claude task (through the viewer's Claude Code Remote connector) to commit the design
+   file to the repository; the repository's workflow then deploys the site. */
+const PUB={server:'Claude Code Remote',trigger:'trig_01Mshmww5KwdxfBQN3tnAhk3',site:'https://brockwilson132.github.io/Minecraft-Designer/'};
+let mcp=null,pubArmed=0,pubWatch=null;
+async function publish(){const c=BK.Builder.context();if(!c||busy)return;const d=c.design;
+  if(!mcp){note('Publishing needs the Claude Code Remote connector in this view.','warn');return;}
+  if(Date.now()-pubArmed>5000){pubArmed=Date.now();note(`Tap “Publish to GitHub” again to put “${d.name}” on the public site. It replaces the copy there.`,'warn');return;}
+  pubArmed=0;const text='DESIGN_ID: '+d.id+'\n===FILE===\n'+BK.Store.fileText(d)+'\n===END===\n';
+  if(new Blob([text]).size>60000){note('This design file is too large to publish from here. Export it and ask Claude in a coding session to add it.','warn');return;}
+  $('stPublish').disabled=true;note('Sending to GitHub…');
+  let fired=Date.now();
+  try{await mcp.callTool(PUB.server,'fire_trigger',{trigger_id:PUB.trigger,text},{cache:false});}
+  catch(e){$('stPublish').disabled=false;note({not_in_manifest:'This page is not allowed to publish. Allow the connector in the page’s permissions.',server_not_connected:'Connect Claude Code Remote in claude.ai settings to publish.',approval_required:'Approve the connector request to publish.'}[e.code]||('Could not start publishing: '+(e.message||e.code)),'warn');return;}
+  note('Publishing started. The site updates in about 2–4 minutes.','ok');
+  // follow the task's run so the panel can say when it is done
+  let tries=0;clearInterval(pubWatch);
+  pubWatch=setInterval(async()=>{if(++tries>16){clearInterval(pubWatch);$('stPublish').disabled=false;note('Still publishing. Check the site in a few minutes: '+PUB.site+'#'+d.id);return;}
+    try{const r=await mcp.callTool(PUB.server,'list_triggers',{limit:20},{cache:false});const p=r.payload||{};const list=p.data||p.triggers||[];
+      const t=list.find(x=>x.id===PUB.trigger);const lr=t&&t.last_run;
+      if(lr&&lr.fired_at&&Date.parse(lr.fired_at)>=fired-60000&&/SUCCEEDED|FAILED|ERROR|CANCEL/i.test(lr.status||'')){
+        clearInterval(pubWatch);$('stPublish').disabled=false;
+        if(/SUCCEEDED/i.test(lr.status))note('Committed to GitHub. The site will show it in a minute or two: '+PUB.site+'#'+d.id,'ok');
+        else note('Publishing did not finish ('+lr.status+'). Try again, or export the file.','warn');}}catch(e){}},20000);}
+
 function bind(){if(bound)return;bound=true;
   $('chatForm').addEventListener('submit',e=>{e.preventDefault();send($('chatIn').value);});
   $('chatIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send($('chatIn').value);}});
   $('chatStop').onclick=()=>ctl&&ctl.abort();
   $('chatLog').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b)send(b.dataset.s);});
-  $('stUndo').onclick=undo;$('stRevert').onclick=revert;$('stExport').onclick=exportFile;
+  $('stUndo').onclick=undo;$('stPublish').onclick=publish;$('stRevert').onclick=revert;$('stExport').onclick=exportFile;
   $('stDeep').onchange=e=>{deep=e.target.checked;};}
 BK.Studio={
   async init(){sample=BK.Store.sample;const on=!!(sample&&BK.Store.canSave);
+    mcp=on&&globalThis.claude?await claude.use('mcp').catch(()=>null):null;$('stPublish').hidden=!mcp;
     document.querySelectorAll('[data-needs-claude]').forEach(el=>el.hidden=!on);if(on){bind();const c=BK.Builder.context();if(c&&c.design){turns=chats.get(c.design.id)||[];chats.set(c.design.id,turns);renderChat();status();}}return on;},
   get available(){return !!(sample&&BK.Store.canSave);},
   onOpen(id){turns=chats.get(id)||[];if(!chats.has(id))chats.set(id,turns);if(this.available){renderChat();status();}},
