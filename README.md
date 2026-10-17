@@ -30,6 +30,17 @@ Progress and view settings are saved in your browser (`localStorage`). They are 
 | Ctrl + scroll | Zoom |
 | Esc | Close a panel |
 
+## Design with Claude
+
+In the Claude-hosted version of the app, the builder has a **✦ Claude** button and the library has a **New design** card.
+
+- **Ask for changes in plain words**, such as "make the rose windows bigger" or "add a balcony on this layer". Claude edits only that design's build code and the app rebuilds it at once. Claude knows the cursor position and the current build step, so "here" and "these" work. If an edit doesn't build, Claude sees the error and fixes it, and a broken version is never saved.
+- **New design:** describe a building and Claude drafts it from scratch, split into build steps.
+- **Every change is saved with an undo point.** **Undo** steps back one change. **Revert to original** drops all edits to a built-in design.
+- **Export** saves the design as `designs/<id>.js`, ready for this repository.
+
+Designs made or edited in the app are stored with the Claude-hosted app, not in this repository. To publish one here, export it (or ask Claude in a coding session to bring it over), add the file to `designs/` and its `<script>` line to `index.html`. The GitHub Pages site has no Claude panel, because it can't reach a Claude account. Everything else works the same there.
+
 ## Run it
 
 Open `index.html` directly. It uses plain `<script>` tags, so it also works from `file://`.

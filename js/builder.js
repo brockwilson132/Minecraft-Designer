@@ -23,8 +23,19 @@ function save(){store.set('bw:d:'+D.id,{cx:st.cx,cy:st.cy,cz:st.cz,cols:st.cols,
 let saveT;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(save,250);};
 
 /* ---------- open a design ---------- */
-function open(id){
-  D=BK.design(id);if(!D)return false;S=BK.load(D);E=S.extent;
+let openTok=0;
+async function open(id,keep){
+  const d=BK.design(id);if(!d)return false;const tok=++openTok;
+  if(!keep){D=d;$('bName').textContent=d.name;$('bMeta').textContent='Building…';closeSheets();}
+  let scene;
+  try{scene=BK.cached(id)||await BK.loadAsync(d);}
+  catch(err){if(tok!==openTok)return false;D=d;$('bMeta').textContent='Does not build';$('stageMsg').hidden=false;
+    $('stageMsg').textContent='This design does not build right now: '+err.message+(BK.Studio&&BK.Studio.available?' Ask Claude to fix it, or undo the last change.':'');
+    BK.Studio&&BK.Studio.onOpen(id);return false;}
+  if(tok!==openTok)return false;
+  $('stageMsg').hidden=true;
+  if(D&&st&&D.id===id)save();
+  D=d;S=scene;E=S.extent;
   S.ALL.forEach(v=>{if(v.fr===undefined){const b=S.B[v.id];v.fr=v.y<=0||!(v.role==='furnish'||FURN.has(v.id)||b.glass||(b.sh&&ORN_SH.has(b.sh)));}});
   byY=new Map();S.ALL.forEach(v=>{if(!byY.has(v.y))byY.set(v.y,[]);byY.get(v.y).push(v);});
   const full=2*E+1;ZL=[full,...[37,27,19,13,9].filter(z=>z<full)];
@@ -32,19 +43,25 @@ function open(id){
   const sv0=store.get('bw:d:'+id,{});
   st=Object.assign({cx:s0.x,cy:s0.y,cz:s0.z,cols:ZL.includes(27)?27:ZL[Math.min(2,ZL.length-1)],axis:'x',mode:'all',cur:0,earlier:'ghost',frame:false,upTo:false,cut:false},sv0);
   if(!ZL.includes(st.cols))st.cols=ZL[Math.min(2,ZL.length-1)];
+  if(!S.steps.length)st.mode='all';
   st.cur=Math.max(0,Math.min(S.steps.length-1,st.cur));
   done=new Set((sv0.done||[]).filter(x=>S.steps.some(s=>s.id===x)));
-  pv.x=st.cx;pv.z=st.cz;sv.h=st.axis==='x'?st.cx:st.cz;sv.y=st.cy;
+  if(!keep){pv.x=st.cx;pv.z=st.cz;sv.h=st.axis==='x'?st.cx:st.cz;sv.y=st.cy;}
   $('bName').textContent=D.name;
   const xs=S.ALL.map(v=>v.x),zs=S.ALL.map(v=>v.z);
-  $('bMeta').textContent=`${Math.max(...xs)-Math.min(...xs)+1} × ${Math.max(...zs)-Math.min(...zs)+1} · ${S.MAXY-Math.min(0,S.MINY)+1} tall · ${S.ALL.length.toLocaleString()} blocks`;
+  $('bMeta').textContent=S.ALL.length?`${Math.max(...xs)-Math.min(...xs)+1} × ${Math.max(...zs)-Math.min(...zs)+1} · ${S.MAXY-Math.min(0,S.MINY)+1} tall · ${S.ALL.length.toLocaleString()} blocks`:'No blocks yet';
   document.title=D.name+' · Blockwright';
-  renderAbout();picDirty=true;closeSheets();
-  build3D();
+  renderAbout();picDirty=true;
+  build3D(keep);
   setTab(ui.tab||'plan',true);
-  refresh(true);
+  refresh(!keep);
+  if(BK.Studio&&!keep)BK.Studio.onOpen(id);else if(BK.Studio)BK.Studio.refresh();
   return true;
 }
+/* rebuild the open design after an edit, keeping the cursor, tab and camera */
+function reload(){if(D)return open(D.id,true);}
+function context(){if(!D||!S||!st)return D?{design:D}:null;const v=S.V.get(S.K(st.cx,st.cy,st.cz));
+  return {design:D,x:st.cx,y:st.cy,z:st.cz,block:v?(S.B[v.id].n+(note(v)?' ('+note(v)+')':'')):'air',step:st.mode==='step'?S.steps[st.cur]:(v&&S.steps[v.si])||null,mode:st.mode,tab:ui.tab};}
 
 /* ---------- 3D ---------- */
 const view=$('view3d');
@@ -65,7 +82,7 @@ function init3D(){if(ok3D!==null)return ok3D;
   controls.maxPolarAngle=Math.PI*.495;controls.minDistance=8;controls.maxDistance=700;
   new ResizeObserver(size3D).observe(view);
   return ok3D=true;}
-function build3D(){if(!init3D())return;
+function build3D(keepCam){if(!init3D())return;
   meshes.forEach(m=>{scene.remove(m.mesh);m.mesh.geometry.dispose();m.mesh.material.dispose();});meshes=[];
   const byId={};S.ALL.forEach(v=>(byId[v.id]=byId[v.id]||[]).push(v));
   const col=new THREE.Color(),plain=new THREE.Color(PLAIN);
@@ -74,7 +91,7 @@ function build3D(){if(!init3D())return;
     const mat=b.emit?new THREE.MeshBasicMaterial({color:0xffffff}):new THREE.MeshLambertMaterial({color:0xffffff,transparent:!!b.glass,opacity:b.glass?Math.min(.85,b.glass*.7):1,depthWrite:!b.glass});
     const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,n);if(b.glass)mesh.renderOrder=2;
     meshes.push({mesh,list:byId[id]});scene.add(mesh);}
-  resetCam();}
+  if(!keepCam)resetCam();}
 function resetCam(){if(!controls)return;const h=S.MAXY,dist=Math.max(90,h*1.45+E*2.2);
   const dir=new THREE.Vector3(.62,.42,.66).normalize();controls.target.set(0,h*.46,0);camera.position.copy(controls.target).addScaledVector(dir,dist);controls.update();draw3D();}
 function frameStep(s){if(!controls)return;const dir=camera.position.clone().sub(controls.target).normalize();
@@ -273,8 +290,8 @@ document.querySelectorAll('[data-scope]').forEach(b=>b.onclick=()=>{scope=b.data
 function renderSteps(){let html='',g='';
   S.steps.forEach(s=>{if(s.g!==g){g=s.g;html+=`<h3>${g}</h3>`;}const dn=done.has(s.id);
     html+=`<div class="srow${st.mode==='step'&&s.i===st.cur?' on':''}"><button class="tick" data-tick="${s.i}" aria-pressed="${dn}" aria-label="Mark ${s.name} done">${dn?'✓':s.i+1}</button><button class="go" data-go="${s.i}"><span>${s.name}</span><span class="yr">${s.ya===s.yb?'y '+s.ya:'y '+s.ya+'–'+s.yb}</span></button></div>`;});
-  $('stepList').innerHTML=html;
-  $('prog').textContent=`${done.size}/${S.steps.length} done`;$('progBar').style.width=(done.size/S.steps.length*100)+'%';
+  $('stepList').innerHTML=html||'<p class="muted small">No build steps yet.</p>';
+  $('prog').textContent=`${done.size}/${S.steps.length} done`;$('progBar').style.width=(S.steps.length?done.size/S.steps.length*100:0)+'%';
   document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===st.mode));
   document.querySelectorAll('[data-earlier]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.earlier===st.earlier));
   $('earlierRow').hidden=st.mode!=='step';
@@ -282,8 +299,9 @@ function renderSteps(){let html='',g='';
   if(st.mode==='step'){$('sGrp').textContent=`Step ${s.i+1} of ${S.steps.length} · ${s.g}`;$('sName').textContent=s.name;}
   else{$('sGrp').textContent=`Whole build · ${S.steps.length} steps`;$('sName').textContent='Choose a step';}
   $('sPrev').disabled=st.mode==='step'&&st.cur<=0;$('sNext').disabled=st.mode==='step'&&st.cur>=S.steps.length-1;
-  $('sDone').disabled=st.mode!=='step';$('sDone').setAttribute('aria-pressed',st.mode==='step'&&done.has(s.id));}
-function goToStep(i){if(!S)return;st.cur=Math.max(0,Math.min(S.steps.length-1,i));st.mode='step';
+  $('sDone').disabled=st.mode!=='step';$('sDone').setAttribute('aria-pressed',!!(st.mode==='step'&&s&&done.has(s.id)));
+  if(!S.steps.length){$('sPrev').disabled=$('sNext').disabled=true;$('sName').textContent='No steps yet';}}
+function goToStep(i){if(!S||!S.steps.length)return;st.cur=Math.max(0,Math.min(S.steps.length-1,i));st.mode='step';
   const s=S.steps[st.cur],pool=s.list.filter(placeable);
   if(pool.length){let ya=1e9;for(const v of pool)if(v.y<ya)ya=v.y;let best=null,bd=1e9;
     for(const v of pool){if(v.y!==ya)continue;const d=(v.x-st.cx)**2+(v.z-st.cz)**2;if(d<bd){bd=d;best=v;}}st.cx=best.x;st.cz=best.z;st.cy=best.y;}
@@ -338,5 +356,6 @@ const reTheme=()=>{if(S&&!$('builder').hidden){draw2D();update3D();if(ui.tab==='
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',reTheme);
 new MutationObserver(reTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-BK.Builder={open,close:()=>{closeSheets();}};
+$('studioBtn').onclick=()=>{if($('pStudio').classList.contains('open'))closeSheets();else{openSheet('pStudio');BK.Studio&&BK.Studio.refresh();}};
+BK.Builder={open,reload,context,openStudio:()=>openSheet('pStudio'),close:()=>{closeSheets();}};
 })(globalThis.BK=globalThis.BK||{});
