@@ -4,12 +4,12 @@
    the front door faces south. */
 BK.register({
   id:'village-cottage',
-  version:2,
+  version:3,
   name:'Village Cottage',
   blurb:'A storybook cottage: rubble walls with stone quoins, a jettied timber-framed upper storey, a steep spruce roof with three dormers, a carved oriel, a stepped chimney over an inglenook, and a walled garden with a well and an arbour.',
   tags:['Medieval','Village','House','Medium'],
   edition:'Bedrock',
-  extent:14,
+  extent:28,
   start:{x:0,y:1,z:10},
   figure:{x:3,z:12},
   blocks:{
@@ -50,7 +50,8 @@ BK.register({
     ['Garden','garden-wall','Garden wall & gates'],
     ['Garden','garden','Paths, beds, trees & vegetables'],
     ['Garden','well','Well'],
-    ['Garden','arbour','Arbour & bench']
+    ['Garden','arbour','Arbour & bench'],
+    ['Garden','sundial','Sundial compass']
   ],
   tiers:[
     {a:0,b:5,name:'Ground storey',short:'Rubble walls, stone quoins, deep-set windows',p:'Walls of cobblestone rubble with mossy patches and odd blocks of stone, on a sloped cobblestone plinth, with long-and-short dressed andesite quoins at every corner and a stone brick string course under the jetty. Every window is set a block back in a stone reveal, with a spruce mullion, a dark oak lintel, an upside-down stone brick sill and a stone drip hood that runs over spruce shutters. The front door sits in stone jambs under a dark oak lintel, behind a timber porch. On the east gable a massive chimney breast of weathered stone bricks steps in once as it rises.',m:['cobblestone','mossy_cobblestone','stone','stone_bricks','stone_brick_stairs','glass_pane','stripped_spruce_log','stripped_dark_oak_log','spruce_trapdoor','spruce_door']},
@@ -60,6 +61,7 @@ BK.register({
     {a:0,b:7,name:'Garden',short:'Walled garden, well, arbour, vegetable patch',p:'A low cobblestone wall with stone brick piers encloses the garden, with a three-gate entrance between lantern-topped piers and a back gate. A path of dirt and gravel runs to the porch between flower beds of poppies, dandelions, cornflowers and alliums. To the west, a roofed well with a winch chain; to the east, an arbour of flowering azalea over a bench. Behind the house: a watered vegetable patch with a scarecrow, two oak trees, and a woodshed lean-to stacked with logs against the west wall.',m:['cobblestone','mossy_cobblestone','cobblestone_wall','stone_bricks','spruce_fence_gate','dirt_path','gravel','coarse_dirt','farmland','water','oak_log','oak_leaves','flowering_azalea_leaves']}
   ],
   notes:[
+    ['Sundial compass','Outside the gate the lane opens into a round sundial garden, 13 blocks across. Paths run to the four quarters, the north one straight up to the gate. Twelve carved hour stones sit in a gravel ring, the gold one at noon in the north. Flower beds fill the quarters: dandelions north-east, alliums south-east, cornflowers south-west, poppies north-west. A clipped box hedge rings it, with lanterns on the diagonals and a stone sundial with a copper gnomon at the centre.'],
     ['Order','Build the ground storey, the chimney breast and the ceiling beams, then lay the jetty floor and stand the upper frame on it. Fill the panels, then set the roof and cut the dormers in. The chimney stack goes up last.'],
     ['Jetty','The upper floor sticks out one block front and back. The joist ends under it are upside-down dark oak stairs on the string course, one on every other block and one under each corner.'],
     ['Dormers','Each dormer sits on the top plate. Lay the main roof first, then take out the roof stairs inside the dormer and build its front, cheeks and roof. The cursor shows which roof blocks go.'],
@@ -326,5 +328,27 @@ BK.register({
     for(let x=9;x<=10;x++)st(x,1,11,'oak_stairs',[0,1]);
     put(9,1,8,'flower_pot');put(10,1,8,'flower_pot');
     w.role=null;
+      /* ===== Compass: a sundial garden outside the gate. The gate path becomes its north arm. ===== */
+    w.comp='sundial';
+    const CZ=21;
+    const fl={NE:'dandelion',SE:'allium',SW:'cornflower',NW:'poppy'};
+    for(let z=14;z<=CZ-6;z++)for(let x=-1;x<=1;x++)put(x,0,z,'dirt_path');
+    w.each((x,z)=>{const dx=x,dz=z-CZ,r=Math.hypot(dx,dz);if(r>6.5)return;
+      const arm=(Math.abs(dx)<1||Math.abs(dz)<1);
+      if(r<=1.5){put(x,0,z,'smooth_stone');return;}
+      if(r>5.6){                                              // a clipped box hedge, open where the paths leave
+        put(x,0,z,arm?'dirt_path':'grass_block');if(!arm)put(x,1,z,'oak_leaves');return;}
+      if(r>4.5){put(x,0,z,arm?'dirt_path':'gravel');return;}  // the hour ring
+      if(arm){put(x,0,z,'dirt_path');return;}
+      put(x,0,z,'grass_block');
+      if((x+z)%2===0)put(x,1,z,fl[(dz<0?'N':'S')+(dx>0?'E':'W')]);});
+    // twelve hour stones set into the gravel ring; the four quarters also get a little stone post
+    for(let k=0;k<12;k++){const a=k*Math.PI/6-Math.PI/2,x=Math.round(5.1*Math.cos(a)),z=CZ+Math.round(5.1*Math.sin(a));
+      put(x,0,z,k===0?'gold_block':'chiseled_stone_bricks');}
+    // the sundial: a carved pedestal, a stone dial plate and a copper gnomon
+    put(0,1,CZ,'chiseled_stone_bricks');put(0,2,CZ,'stone_brick_wall');put(0,3,CZ,'stone_brick_slab');put(0,4,CZ,'lightning_rod');
+    for(const [sx,sz] of [[1,1],[1,-1],[-1,1],[-1,-1]]){const x=sx*5,z=CZ+sz*5;put(x,1,z,'cobblestone_wall');put(x,2,z,'lantern');}
+    // a bench on the south arm, facing the dial
+    for(const x of [-2,-1,1,2])put(x,1,CZ+4,'spruce_stairs',{f:[0,1]});
   }
 });

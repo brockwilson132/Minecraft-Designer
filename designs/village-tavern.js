@@ -5,15 +5,15 @@
    x 0, z 0 is near the middle of the inn; the street front faces south. */
 BK.register({
   id:'village-tavern',
-  version:2,
+  version:3,
   name:'Village Tavern',
   blurb:'A coaching inn: stone taproom with a vaulted-arch entrance, two jettied timber storeys under three bargeboarded gables, an oriel, brick stacks, a coach house with hayloft, and a walled beer garden with pergola and well.',
   tags:['Medieval','Village','Tavern','Large'],
   edition:'Bedrock',
-  extent:18,
+  extent:22,
   start:{x:-3,y:1,z:5},
   figure:{x:-1,z:8},
-  blocks:{
+  blocks:{polished_granite:{n:'Polished Granite',c:'#9a6b56'},
     campfire:{n:'Campfire',c:'#e0862f',sh:'slab',emit:1},
     smoker:{n:'Smoker',c:'#5b4a3a'},
     oak_leaves:{n:'Oak Leaves',c:'#4c7a2e'},
@@ -23,6 +23,7 @@ BK.register({
   },
   steps:[
     ['Ground','yard','Street, paving & coach yard'],
+    ['Ground','compass','Crossroads compass & fingerpost'],
     ['Ground','cellar','Barrel cellar'],
     ['Ground','floor','Floors & hearthstone'],
     ['Taproom storey','stone-walls','Stone walls, plinth & quoins'],
@@ -58,6 +59,7 @@ BK.register({
     {a:0,b:6,name:'Beer garden',short:'Pergola, tables, well',p:'Behind the inn a low mossy wall closes a lawn with gravel paths. A dark oak pergola, its slats grown over with leaves and hung with lanterns, shelters three long tables with benches. Barrel tables stand on the lawn, and a stone well with a shingled hood sits by the kitchen door, with a young oak in the corner.',m:['grass_block','gravel','cobblestone_wall','stripped_dark_oak_log','dark_oak_slab','oak_leaves','spruce_slab','spruce_stairs','barrel','cobblestone','water']}
   ],
   notes:[
+    ['Compass','In the street before the inn: an eight-point star made of two interlaced squares, where the squares cross outlined in polished blackstone, 15 blocks across, inside a ring of 16 alternating carved and plain stone bricks. The north tip, pointing at the inn door, is red nether brick. A fingerpost stands at the centre with arms to the four roads and a lantern on top.'],
     ['Order','Raise the stone storey and both chimney bases first. Then lay each jetty floor before its frame: the front posts of each timber storey stand on the overhang of the floor below.'],
     ['Roof','The three front gables and the main roof meet in valleys. Build the main roof first, then each cross-gable roof over it; follow the top view layer by layer and the valleys fall into place.'],
     ['Braces','Each brace is two dark oak planks set on the diagonal inside a 2 × 2 panel, with calcite in the other two cells. Bays with a window get plain calcite instead.'],
@@ -484,5 +486,29 @@ BK.register({
     for(let x=X0;x<=X1;x++){if(get(x,8,ZF1)?.id==='glass_pane'&&!(x>=2&&x<=4))put(x,7,ZF1+1,'flower_box');
       if(GC.includes(x))put(x,12,ZF2+1,'flower_box');}
     for(const x of [-10,-8,-4,-2,4])put(x,7,ZB-1,'flower_box');
+      /* ===== Compass: a wayfarer's crossroads in the street, an interlaced eight-point star round a fingerpost ===== */
+    w.comp='compass';
+    const CZ=14;
+    each((x,z)=>{const dx=x,dz=z-CZ,r=Math.hypot(dx,dz);if(r>7.2)return;
+      let id;
+      if(r>6.3){const bin=Math.floor(((Math.atan2(dz,dx)+2*Math.PI)%(2*Math.PI))/(Math.PI/8));id=bin%2?'stone_bricks':'chiseled_stone_bricks';}
+      else{const ax=Math.abs(dx),az=Math.abs(dz),inA=ax<=4.5&&az<=4.5,inB=ax+az<=6.3;
+        const star=(p,q)=>(Math.abs(p)<=4.5&&Math.abs(q)<=4.5)||Math.abs(p)+Math.abs(q)<=6.3;
+        const core=(p,q)=>Math.abs(p)<=4.5&&Math.abs(q)<=4.5&&Math.abs(p)+Math.abs(q)<=6.3;
+        const edge=core(dx,dz)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>!core(dx+a,dz+b));   // the octagon where the squares cross
+        if(r<1.5)id='polished_deepslate';
+        else if(r<2.5)id='smooth_stone';
+        else if(!inA&&!inB)id='cobblestone';
+        else if(edge)id='polished_blackstone';
+        else if(inA&&inB)id='smooth_sandstone';
+        else if(inB)id=dz<0&&ax<1?'red_nether_bricks':'polished_andesite';     // cardinal tips; north, toward the inn, in red
+        else id='polished_granite';}                                           // the four diagonal tips
+      put(x,0,z,id);});
+    // the fingerpost: a carved stone foot, a spruce post, four arms at two heights, a lantern on top
+    put(0,1,CZ,'chiseled_stone_bricks');put(0,2,CZ,'stone_brick_wall');
+    for(let y=3;y<=5;y++)put(0,y,CZ,'stripped_spruce_log');
+    for(const s of [-1,1]){put(s,5,CZ,'spruce_slab',{up:true});put(0,4,CZ+s,'spruce_slab',{up:true});}
+    put(0,6,CZ,'spruce_fence');put(0,7,CZ,'lantern');
+    for(const [x,z] of [[-6,CZ-6],[6,CZ-6],[-6,CZ+6],[6,CZ+6]]){put(x,1,z,'stone_brick_wall');put(x,2,z,'lantern');}
   }
 });

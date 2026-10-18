@@ -4,12 +4,12 @@
    x 0, z 0 is just inside the join of the two wings; the front door faces south. */
 BK.register({
   id:'starter-house',
-  version:2,
+  version:3,
   name:'Starter House',
   blurb:'An L-shaped survival homestead: proud oak posts on a cobblestone plinth, a cross gable with a balcony, a stone chimney, a wrap-round porch, a full interior, and a farm, well, workshop and pen around it.',
   tags:['Survival','Base','House','Medium'],
   edition:'Bedrock',
-  extent:20,
+  extent:24,
   start:{x:-3,y:1,z:4},
   figure:{x:-2,z:9},
   blocks:{
@@ -48,7 +48,8 @@ BK.register({
     ['Grounds','farm','Farm'],
     ['Grounds','workshop','Workshop lean-to'],
     ['Grounds','pen','Animal pen'],
-    ['Grounds','garden','Trees, hedges & flowers']
+    ['Grounds','garden','Trees, hedges & flowers'],
+    ['Grounds','campfire-compass','Campfire compass']
   ],
   tiers:[
     {a:0,b:2,name:'Plinth & grounds',short:'Cobblestone plinth, decks, paths',p:'The house stands on a two-course cobblestone plinth with stone-brick quoins at every corner and a sloped footing of cobblestone stairs round the open sides. The oak posts stand one block proud of the walls and start on the plinth too, so every post reads from the ground up. Spruce decks run under the porch, the balcony and the workshop. Dirt paths edged with gravel join the front door, the garden door, the back door, the well, the farm gate and the pen, lit by lantern posts on cobblestone feet.',m:['cobblestone','mossy_cobblestone','stone_bricks','cobblestone_stairs','spruce_planks','dirt_path','gravel','cobblestone_wall','oak_fence','lantern']},
@@ -59,6 +60,7 @@ BK.register({
     {a:0,b:6,name:'Farmstead',short:'Farm, well, workshop, pen',p:'North of the house, a fenced plot of wheat and carrots is watered by two channels either side of a path, with a scarecrow, a gate and lanterns on the corner posts. A cobblestone well with a little spruce roof stands south-west. The workshop is a lean-to on the east wall with an anvil, a grindstone, a log pile and a tool rack. South-east, an animal pen has a slab-roofed shelter, hay and a water trough. Oak trees, leaf hedges and flower beds finish the site.',m:['farmland','carrots','water','oak_fence','oak_fence_gate','cobblestone','anvil','grindstone','hay_block','oak_log','oak_leaves','flowers']}
   ],
   notes:[
+    ['Campfire compass','Down the lane from the front door: a campfire circle laid as an eight-point compass, all in early blocks. The four long points are cobblestone and mossy cobblestone (north in stone bricks, toward the house); the four short ones are oak and spruce planks. Gravel fills between them inside a cobblestone ring. The campfire sits in a ring of slabs with log seats on the diagonals, and lantern posts stand at the east, south and west points, while the two lantern posts beside the lane frame the north point.'],
     ['Survival cost','Roughly 13 stacks of spruce (roof, logs, decks), 6 stacks of oak (posts, fences, bargeboards, leaves), a stack and a half of birch planks, 4 stacks of cobblestone and 45 glass panes. The only iron is the anvil, the blast furnace and the lanterns; leave those for later if you need to.'],
     ['Order','Plinth, frame and panels first, then the roof, so you have shelter. Posts, shutters and the porch come after; the grounds last.'],
     ['Roof valleys','The two roofs are the same height, so where they cross each layer simply meets the other. Lay each layer of both roofs before starting the next one up.'],
@@ -313,5 +315,26 @@ BK.register({
     for(let z=3;z<=6;z++){put(10,0,z,'grass_block');put(10,1,z,z%2?'oak_leaves':'flowers');}
     for(let x=-12;x<=-11;x++)for(const z of [-3,-2])put(x,1,z,'oak_leaves');
     for(const [x,z] of [[0,10],[2,10],[-5,10]]){put(x,0,z,'grass_block');put(x,1,z,'flowers');}
+      /* ===== Compass: a campfire circle on a cobblestone star, down the lane between the lantern posts ===== */
+    w.comp='campfire-compass';
+    const CX=1,CZ=18;
+    for(let z=13;z<CZ-5;z++)for(let x=CX-1;x<=CX+1;x++)put(x,0,z,'dirt_path');
+    // four long points to the quarters and four short ones between, each bevelled light and dark
+    const PTS=[];for(let k=0;k<8;k++)PTS.push([k*Math.PI/4-Math.PI/2,k%2?2.9:4.6,k%2?.9:1.5,k]);
+    for(let x=CX-5;x<=CX+5;x++)for(let z=CZ-5;z<=CZ+5;z++){const dx=x-CX,dz=z-CZ,r=Math.hypot(dx,dz);if(r>5.2)continue;
+      let id=r>4.6?'cobblestone':'gravel';
+      const th=Math.atan2(dz,dx),dA=a=>Math.abs(((th-a)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI);
+      for(const [a,R,W,k] of [...PTS].sort((p,q)=>dA(p[0])-dA(q[0]))){const al=dx*Math.cos(a)+dz*Math.sin(a),pe=-dx*Math.sin(a)+dz*Math.cos(a);
+        if(al<0||al>R+.3||Math.abs(pe)>W*(1-al/(R+.3))+.2)continue;
+        const lite=pe>=0;id=k===0?(lite?'chiseled_stone_bricks':'stone_bricks'):k%2?(lite?'oak_planks':'spruce_planks'):(lite?'cobblestone':'mossy_cobblestone');break;}
+      if(r<1.5)id='cobblestone';
+      put(x,0,z,id);}
+    // the fire pit, ringed with slabs, and log seats on the diagonals
+    put(CX,1,CZ,'campfire');
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]])put(CX+dx,1,CZ+dz,'stone_brick_slab');
+    for(const [dx,dz] of [[3,3],[-3,3],[3,-3],[-3,-3]])put(CX+dx,1,CZ+dz,'stripped_oak_log');
+    // lantern posts at the east, south and west points; the lane's own posts mark north
+    for(const [dx,dz] of [[5,0],[0,5],[-5,0]]){const x=CX+dx,z=CZ+dz,h=2;put(x,0,z,'cobblestone');
+      for(let y=1;y<=h;y++)put(x,y,z,'oak_fence');put(x,h+1,z,'lantern');}
   }
 });

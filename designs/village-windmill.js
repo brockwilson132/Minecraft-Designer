@@ -4,7 +4,7 @@
    x 0, z 0 is the middle of the tower; the door and the sails face south. */
 BK.register({
   id:'village-windmill',
-  version:2,
+  version:3,
   name:'Village Windmill',
   blurb:'A grand octagonal tower mill: buttressed stone base with an arched porch, a timber stage on joists, a white ogee cap with a fantail, four lattice sails, and a full set of millstones and gears inside.',
   tags:['Medieval','Village','Windmill','Large'],
@@ -43,6 +43,7 @@ BK.register({
     ['Granary','granary','Granary on staddle stones'],
     ['Granary','granary-roof','Granary roof'],
     ['Yard','yard','Wheat field, cart & lamp posts'],
+    ['Yard','wind-rose','Wind rose'],
     ['Inside','furniture','Sacks, barrels & lights']
   ],
   tiers:[
@@ -69,6 +70,7 @@ BK.register({
       m:['stone_brick_wall','smooth_stone_slab','stripped_spruce_log','spruce_planks','dark_oak_stairs','farmland','water','oak_fence','dirt_path','white_wool','brown_wool']}
   ],
   notes:[
+    ['Wind rose','West of the lane, an old-style wind rose 11 blocks across, laid in the yard: the four main winds in hay bales (north in red wool), the four half-winds in stripped oak, the eight quarter-winds in coarse dirt, on grass inside a ring of cobblestone and mossy cobblestone. Its hub is a worn-out millstone laid flat. A red pennant on a pole marks north, so you can read the wind against the sails.'],
     ['Order','Raise the stone base, then the stage joists and deck: you will stand on the stage to build the body. Build the floors and ladders as you go up, so you always have something to stand on.'],
     ['Octagon','Each course is an octagon, and the body narrows by about one block every twelve courses. Follow the Top view layer by layer: the diagonal faces step in on their own schedule.'],
     ['Sails','The sails stand in one plane, two blocks in front of the cap, centred on the windshaft at y 37. Place each stock first, then the fence lattice, then the cloth. The west sail is reefed on purpose.'],
@@ -338,5 +340,25 @@ BK.register({
     put(2,13,2,'lectern');put(-2,13,-3,'white_wool');put(-1,13,-3,'white_wool');put(-2,14,-3,'brown_wool');put(1,13,-4,'barrel');
     for(const [x,y,z] of [[2,4,2],[-2,11,2],[3,18,3],[-2,25,2],[2,32,2]])put(x,y,z,'lantern');
     w.role=null;
+      /* ===== Compass: a wind rose of the eight winds in the yard, round an old millstone ===== */
+    w.comp='wind-rose';
+    const WX=-10,WZ=14;
+    // [angle from north, clockwise; reach; half-width at the hub; block]
+    const RAYS=[];
+    for(let k=0;k<16;k++){const main=k%4===0,half=k%4===2;
+      RAYS.push([k*22.5,main?4.7:half?4.1:2.9,main?1.7:half?1.35:.8,main?(k===0?'red_wool':'hay_block'):half?'stripped_oak_log':'coarse_dirt']);}
+    each((x,z)=>{const dx=x-WX,dz=z-WZ,r=Math.hypot(dx,dz);if(r>5.4)return;
+      if(r>4.95){put(x,0,z,(Math.round(Math.atan2(dz,dx)*8/Math.PI)%2)?'cobblestone':'mossy_cobblestone');return;}
+      let id='grass_block';
+      for(const [deg,R,W,b] of RAYS){const a=(deg-90)*Math.PI/180,al=dx*Math.cos(a)+dz*Math.sin(a),pe=-dx*Math.sin(a)+dz*Math.cos(a);
+        if(al>=0&&al<=R+.3&&Math.abs(pe)<=W*(1-al/(R+.3))+.2){id=b;break;}}
+      if(r<1.6)id='smooth_stone';
+      put(x,0,z,id);});
+    // the hub is a worn-out millstone laid flat, with a pennant pole on the north tip
+    put(WX,1,WZ,'smooth_stone_slab');
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]])put(WX+dx,1,WZ+dz,'smooth_stone_slab');
+    for(let y=1;y<=4;y++)put(WX,y,WZ-6,'spruce_fence');put(WX,5,WZ-6,'lightning_rod');
+    put(WX+1,4,WZ-6,'red_wool');put(WX+2,4,WZ-6,'red_wool');put(WX+1,3,WZ-6,'red_wool');
+    put(WX,0,WZ-6,'cobblestone');
   }
 });

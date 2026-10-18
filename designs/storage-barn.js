@@ -2,7 +2,7 @@
    a tack room and a paddock. Main barn 25 × 17. x 0, z 0 is the middle of the hall floor; the big doors face east. */
 BK.register({
   id:'storage-barn',
-  version:2,
+  version:3,
   name:'Storage Barn',
   blurb:'A red gambrel barn on a stone footing: X-braced sliding doors, a hay hood with a hoist, a louvred cupola, a domed brick silo, a lean-to shed, a tack room and a paddock. Inside, a labelled storage hall with lofts.',
   tags:['Survival','Storage','Barn','Farm','Large'],
@@ -10,7 +10,7 @@ BK.register({
   extent:22,
   start:{x:13,y:1,z:0},
   figure:{x:17,z:3},
-  blocks:{
+  blocks:{yellow_concrete:{n:'Yellow Concrete',c:'#f0af15'},orange_concrete:{n:'Orange Concrete',c:'#e06101'},blue_concrete:{n:'Blue Concrete',c:'#2c2e8f'},light_blue_concrete:{n:'Light Blue Concrete',c:'#2489c7'},
     item_frame:{n:'Item Frame (label)',c:'#b9854f',sh:'trap'},
     spruce_fence_gate:{n:'Spruce Fence Gate',c:'#735538',sh:'fence'},
     oak_leaves:{n:'Oak Leaves',c:'#4f7d2f'},
@@ -33,7 +33,7 @@ BK.register({
     ['Roof','roof','Gambrel roof'],
     ['Roof','eaves','Fascia, brackets & bargeboards'],
     ['Roof','dormers','Dormers'],['Roof','hood','Hay hood & hoist'],
-    ['Roof','cupola','Cupola & weathervane'],
+    ['Roof','barn-star','Barn star'],['Roof','cupola','Cupola & weathervane'],
     ['Outbuildings','leanto','North lean-to shed'],
     ['Outbuildings','tack','Tack room'],
     ['Outbuildings','silo','Silo'],
@@ -57,6 +57,7 @@ BK.register({
   notes:[
     ['Order','Lay the pad, plinth and string course all round before raising the red walls, so the courses line up. Build the lofts before the roof: they are your scaffold.'],
     ['Gambrel','Each slope, from the eave up: two flared stairs, then a steep run (two full blocks and a stair, then block-and-stair twice), then a shallow run of alternating stairs and top slabs to the ridge. Follow one column in the Side view and copy it along.'],
+    ['Barn star','The west gable carries an eight-point hex sign with the round window at its hub: a compass painted the way farm barns were. Its north point is gold, at the top. The weathervane on the cupola has arms to the four quarters, the north one tipped in gold.'],
     ['Labels','The item frames are drawn as coloured plates: put the item that the barrel or chest holds in each frame.'],
     ['Survival','About 6,100 blocks: roughly 10 stacks of red terracotta, 17 of deepslate tiles (stairs, blocks and slabs), 12 of smooth quartz, 4½ of bricks and 18 of stone and cobblestone. 114 barrels and 54 chests. Swap smooth quartz for birch planks or white concrete if you have no quartz.']
   ],
@@ -232,6 +233,21 @@ BK.register({
     // weathervane: a copper arrow on a rod
     for(let y=30;y<=33;y++)put(0,y,0,'lightning_rod');
     put(-1,32,0,'oxidized_cut_copper_slab',{up:true});put(-2,32,0,'oxidized_cut_copper_stairs',{f:[1,0],up:true});put(1,32,0,'oxidized_cut_copper_stairs',{f:[-1,0]});
+
+    /* ===== Compass: a painted barn star round the west oculus, and compass arms on the weathervane ===== */
+    w.comp='barn-star';
+    // an eight-point hex sign on the gable, the round window at its hub. Each point is bevelled light/dark,
+    // north (up) in gold, the other cardinals in yellow and orange, the half-winds in two blues.
+    const PTS=[];for(let k=0;k<8;k++){const a=k*Math.PI/4,card=k%2===0;PTS.push([a,card?4.7:3.7,card?1.9:1.35,k]);}
+    for(let z=-5;z<=5;z++)for(let y=10;y<=20;y++){const u=z,v=y-15;if(Math.hypot(u,v)<=1.45||y>=lowY(Math.abs(z))||y<11)continue;
+      const th=Math.atan2(v,u),dA=a=>Math.abs(((th-a)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI);
+      for(const [a,R,W,k] of [...PTS].sort((p,q)=>dA(p[0])-dA(q[0]))){const al=u*Math.cos(a)+v*Math.sin(a),pe=-u*Math.sin(a)+v*Math.cos(a);
+        if(al<0||al>R+.3||Math.abs(pe)>W*(1-al/(R+.3))+.25)continue;
+        const lite=pe>=0,card=k%2===0,north=k===2;
+        put(-X,y,z,north?(lite?'gold_block':'orange_concrete'):card?(lite?'yellow_concrete':'orange_concrete'):(lite?'light_blue_concrete':'blue_concrete'));break;}}
+    w.comp='cupola';
+    // compass arms under the vane: iron arms to the four quarters, a gold tip pointing north
+    for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){put(dx,31,dz,'iron_bars');put(2*dx,31,2*dz,dz===-1?'gold_block':'oxidized_cut_copper');}
 
     /* ===== North lean-to ===== */
     w.comp='leanto';

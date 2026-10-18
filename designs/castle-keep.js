@@ -3,7 +3,7 @@
    x 0, z 0 is the middle of the great hall; the gate faces south. */
 BK.register({
   id:'castle-keep',
-  version:2,
+  version:3,
   name:'Castle Keep',
   blurb:'A great keep: four round towers with dormered cones, a twin-drum gatehouse with portcullis, bretèche and timber hoarding over a moat, machicolated battlements, rose windows, a chapel oriel and a pillared great hall with a canopied throne.',
   tags:['Medieval','Castle','Landmark','Large'],
@@ -32,6 +32,7 @@ BK.register({
     ['Roof','bartizan','North bartizan'],
     ['Roof','roof','Hall roof, gables & louvre'],
     ['Inside','hall','Great hall'],
+    ['Inside','hall-compass','Heraldic compass'],
     ['Inside','upper','Armoury, chapel & solar'],
     ['Outside','outside','Well & lamp posts']
   ],
@@ -45,6 +46,7 @@ BK.register({
     {a:0,b:44,name:'Gatehouse',short:'Twin drums, portcullis, bretèche, hoarding',p:'Two drum towers flank a gate of two orders: a pointed outer arch with polished deepslate jambs, an andesite archivolt and a gilded keystone under a hood mould, then a darker deepslate inner order with the portcullis hanging in it. Dark oak doors close the passage, and murder holes open into it from the guardroom above. Over the gate a bretèche on corbels has slots in its floor and an arrow slit, above it a two-light window, and at the top a dark oak hoarding on putlog beams with shutters and a lean-to roof. Heraldic banners in red and gold hang from both drums, each drum has its own machicolated top and cone, and a drawbridge on chains crosses the moat.',m:['polished_deepslate','deepslate_bricks','chiseled_stone_bricks','gilded_blackstone','iron_bars','dark_oak_door','dark_oak_planks','dark_oak_trapdoor','stripped_dark_oak_log','chain','red_wool','yellow_wool']}
   ],
   notes:[
+    ['Heraldic compass','Inlaid in the hall floor where the red carpet runs up to the throne: an eight-point compass, 9 blocks across, in heraldic colours. The north point, toward the throne, is gules in red nether brick and red wool; east, south and west are or in gold and yellow wool; the half-winds are argent in calcite and quartz. All of it sits on a sable field of polished deepslate inside a blackstone ring studded with gilded blackstone at the eight points.'],
     ['Size','About 30,000 blocks. Most are stone bricks; mossy and cracked bricks are mixed in at random, so swap them for plain bricks if you are short. The cones take roughly 9 stacks of deepslate tiles and tile stairs.'],
     ['Order','Plinth, walls, buttresses, then the openings, then the battlements. Raise the towers before the hall roof: the roof stops where it meets their curved walls.'],
     ['Machicolations','Brackets go on every other block (upside-down stairs), then a full row of upside-down stairs on top, then the parapet. The gaps between the brackets are the murder slots, so leave them open.'],
@@ -437,6 +439,21 @@ BK.register({
     for(const cx of [-5,5])for(const z of COLZ){const ix=-Math.sign(cx);put(cx+ix,8,z,'dark_oak_fence');put(cx+ix,7,z,'lantern');}
     for(const x of [-KI,KI])for(const z of [-6,6]){put(x,8,z,'dark_oak_fence');put(x,7,z,'lantern');}
     w.role=null;
+
+    /* ===== Compass: a heraldic compass inlaid in the hall floor, where the carpet meets the throne ===== */
+    w.comp='hall-compass';
+    {const CZ=2,PTS=[];
+      for(let k=0;k<8;k++)PTS.push([k*Math.PI/4-Math.PI/2,k%2?2.7:3.8,k%2?.95:1.65,k]);
+      for(let x=-5;x<=5;x++)for(let z=CZ-5;z<=CZ+5;z++){const dx=x,dz=z-CZ,r=Math.hypot(dx,dz);if(r>4.6)continue;
+        let id='polished_deepslate';                                                        // a sable field
+        if(r>3.85){const a=(Math.atan2(dz,dx)+2*Math.PI)%(2*Math.PI),k=Math.round(a/(Math.PI/4))%8,near=Math.abs(a-k*Math.PI/4)<.2||Math.abs(a-k*Math.PI/4-2*Math.PI)<.2;
+          id=near?'gilded_blackstone':'polished_blackstone';}
+        else{const th=Math.atan2(dz,dx),dA=a=>Math.abs(((th-a)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI);
+          for(const [a,R,W,k] of [...PTS].sort((p,q)=>dA(p[0])-dA(q[0]))){const al=dx*Math.cos(a)+dz*Math.sin(a),pe=-dx*Math.sin(a)+dz*Math.cos(a);
+            if(al<0||al>R+.3||Math.abs(pe)>W*(1-al/(R+.3))+.2)continue;const lite=pe>=0;
+            id=k===0?(lite?'red_nether_bricks':'red_wool'):k%2?(lite?'calcite':'smooth_quartz'):(lite?'gold_block':'yellow_wool');break;}   // gules north, or and argent
+          if(r<1.1)id='chiseled_polished_blackstone';}
+        put(x,0,z,id);}}
 
     /* ===== Upper floors ===== */
     w.comp='upper';

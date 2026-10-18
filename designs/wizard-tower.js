@@ -4,12 +4,12 @@
    x 0, z 0 is the middle of the tower; the portal faces south. */
 BK.register({
   id:'wizard-tower',
-  version:2,
+  version:3,
   name:"Wizard's Tower",
   blurb:'A weathered stone tower on a buttressed plinth: arched portal, purple lancets, a ring balcony, four rose windows, an observatory with a brass telescope, a corbelled study, and a ribbed, crooked purpur hat with a star finial.',
   tags:['Fantasy','Tower','Landmark','Large'],
   edition:'Bedrock',
-  extent:18,
+  extent:34,
   start:{x:0,y:1,z:12},
   ring:9.5,
   figure:{x:2,z:15},
@@ -24,6 +24,7 @@ BK.register({
   },
   steps:[
     ['Grounds','grounds','Grounds, path & star-chart floor'],
+    ['Grounds','astral-ring','Astral ring compass'],
     ['Plinth','plinth','Plinth & blind arcade'],
     ['Plinth','portal','South portal'],
     ['Plinth','plinth-top','Cornice, parapet & terrace'],
@@ -58,6 +59,7 @@ BK.register({
     {a:80,b:112,name:'Hat',short:'Ribbed, leaning, star-tipped',p:'A purpur hat 25 blocks across at the eave. It flares at the brim and leans east as it rises, with a slight twist north at the top. Every exposed edge is a purpur stair, so the surface reads as shingles, crossed by purpur pillar bands. Eight polished blackstone ribs stand a block proud. Four gabled dormers with dark oak frames and purple glass sit on the brim. The tip carries a blackstone spike and a gold star with end rod points.',m:['purpur_block','purpur_stairs','purpur_pillar','polished_blackstone','stripped_dark_oak_log','deepslate_bricks','purple_stained_glass_pane','gold_block','end_rod']}
   ],
   notes:[
+    ['Astral ring','Where the path ends, a compass laid as a piece of sky, 13 blocks across: a long four-point lodestar in calcite and smooth basalt (north in amethyst and purpur), short purpur pillar rays between, on deepslate tiles scattered with froglight stars. A zodiac ring of polished blackstone carries twelve signs, gold on the four quarters and purpur between. Eight standing stones surround it: tall deepslate ones on the quarters crowned with amethyst, a pair of gold-crowned gate stones with end rods either side of the path at north, and pale calcite stones with soul lanterns between. An amethyst crystal stands at the heart.'],
     ['Build order','Raise the newel and the spiral stair as you build each storey, so you always have a way up. Build the corbel courses before the study walls: the study stands on them.'],
     ['The hat','Each layer of the hat is centred a little further east than the one below. Use the top view one layer at a time; the stairs always face the centre of their own layer.'],
     ['Rose windows','Each rose is planned on the block grid, so every spoke and cusp lands on a whole block. Use the side view through the window centre.'],
@@ -410,5 +412,32 @@ BK.register({
     for(let y=75;y<=79;y++)put(0,y,0,'chain');put(0,74,0,'soul_lantern');
     for(const [x,z] of [[5,0],[-5,0],[0,5]]){for(let y=77;y<=79;y++)put(x,y,z,'chain');put(x,76,z,'lantern');}
     w.role=null;
+      /* ===== Compass: an astral ring of standing stones at the end of the path ===== */
+    w.comp='astral-ring';
+    {const CZ=26;
+      for(let z=19;z<=CZ-7;z++)for(let x=-2;x<=2;x++)put(x,0,z,(x===0)?'polished_deepslate':'stone_bricks');
+      const RAYS=[];
+      for(let k=0;k<8;k++)RAYS.push([k*Math.PI/4-Math.PI/2,k%2?3.1:5.2,k%2?.6:1.15,k]);
+      for(let x=-8;x<=8;x++)for(let z=CZ-8;z<=CZ+8;z++){const dx=x,dz=z-CZ,r=Math.hypot(dx,dz);if(r>6.2)continue;
+        let id=RNG(x,3,z)<.07?'ochre_froglight':'deepslate_tiles';                     // a night sky with a few stars
+        const a=(Math.atan2(dz,dx)+2*Math.PI)%(2*Math.PI);
+        if(r>5.3){const sgn=Math.round(a/(Math.PI/6))%12,near=Math.abs(a-sgn*Math.PI/6)<.13||Math.abs(a-2*Math.PI)<.13;
+          id=near?(sgn%3===0?'gold_block':'purpur_block'):'polished_blackstone_bricks';}  // zodiac ring: twelve signs, gold on the quarters
+        else{const th=Math.atan2(dz,dx),dA=q=>Math.abs(((th-q)%(2*Math.PI)+3*Math.PI)%(2*Math.PI)-Math.PI);
+          for(const [q,R,W,k] of [...RAYS].sort((p,o)=>dA(p[0])-dA(o[0]))){const al=dx*Math.cos(q)+dz*Math.sin(q),pe=-dx*Math.sin(q)+dz*Math.cos(q);
+            if(al<0||al>R+.3||Math.abs(pe)>W*(1-al/(R+.3))+.2)continue;const lite=pe>=0;
+            id=k===0?(lite?'amethyst_block':'purpur_block'):k%2?'purpur_pillar':(lite?'calcite':'smooth_basalt');break;}
+          if(r<1.2)id='amethyst_block';}
+        put(x,0,z,id);}
+      // a crystal at the heart
+      put(0,1,CZ,'amethyst_block');put(0,2,CZ,'amethyst_cluster');
+      // eight standing stones: tall dark ones on the quarters, pale lantern stones between, the north one crowned in gold
+      for(let k=0;k<8;k++){const q=k*Math.PI/4-Math.PI/2,x=Math.round(7.3*Math.cos(q)),z=CZ+Math.round(7.3*Math.sin(q));put(x,0,z,'polished_deepslate');
+        if(k%2){put(x,1,z,'calcite');put(x,2,z,'calcite');put(x,3,z,'soul_lantern');continue;}
+        if(k===0){clr(x,0,z);put(x,0,z,'polished_deepslate');                     // north: a pair of gate stones either side of the path
+          for(const gx of [-3,3]){put(gx,0,z,'polished_deepslate');for(let y=1;y<6;y++)put(gx,y,z,y===2?'chiseled_polished_blackstone':'polished_deepslate');put(gx,6,z,'gold_block');put(gx,7,z,'end_rod');}
+          continue;}
+        for(let y=1;y<5;y++)put(x,y,z,y===2?'chiseled_polished_blackstone':'polished_deepslate');
+        put(x,5,z,'amethyst_block');put(x,6,z,'amethyst_cluster');}}
   }
 });
